@@ -1,0 +1,34 @@
+import Link from "next/link";
+import { CategoryBadge } from "./CategoryBadge";
+import type { RecipeWithTags } from "@/lib/types";
+
+export function RecipeCard({ recipe }: { recipe: RecipeWithTags }) {
+  return (
+    <Link
+      href={`/recipes/${recipe.id}`}
+      className="block rounded-2xl border border-black/5 bg-white/70 p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md dark:bg-white/5"
+    >
+      <div className="flex items-center justify-between gap-2">
+        <CategoryBadge category={recipe.category} />
+        <span className="text-xs text-foreground/50">
+          {new Date(recipe.created_at).toLocaleDateString("ja-JP")}
+        </span>
+      </div>
+      {recipe.tags.length > 0 && (
+        <div className="mt-2 flex flex-wrap gap-1.5">
+          {recipe.tags.map((tag) => (
+            <span
+              key={tag}
+              className="rounded-full bg-orange-50 px-2 py-0.5 text-xs text-orange-600 dark:bg-orange-950/40 dark:text-orange-300"
+            >
+              #{tag}
+            </span>
+          ))}
+        </div>
+      )}
+      {recipe.note && (
+        <p className="mt-2 line-clamp-2 text-sm text-foreground/70">{recipe.note}</p>
+      )}
+    </Link>
+  );
+}
