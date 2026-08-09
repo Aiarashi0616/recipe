@@ -16,7 +16,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "おうちレシピ帳",
+  title: "分けっこみんなごはん",
   description: "材料タグでレシピを検索できる、おうち用レシピ帳です。",
 };
 
@@ -35,7 +35,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
         <header className="sticky top-0 z-10 border-b border-black/5 bg-[var(--background)]/90 backdrop-blur">
           <div className="mx-auto flex max-w-2xl items-center justify-between px-4 py-3">
             <a href="/" className="text-lg font-bold tracking-tight text-accent">
-              🍽️ おうちレシピ帳
+              🍽️ 分けっこみんなごはん
             </a>
             {user && (
               <div className="flex items-center gap-2">

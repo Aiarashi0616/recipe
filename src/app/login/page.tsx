@@ -9,7 +9,7 @@ export default async function LoginPage(props: PageProps<"/login">) {
     <div className="mx-auto flex max-w-sm flex-col gap-6 py-10">
       <div className="text-center">
         <p className="text-2xl">🍽️</p>
-        <h1 className="mt-2 text-xl font-bold">おうちレシピ帳にログイン</h1>
+        <h1 className="mt-2 text-xl font-bold">分けっこみんなごはんにログイン</h1>
       </div>
 
       {error && (
