@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { CATEGORIES } from "@/lib/constants";
+import { CATEGORIES, CATEGORY_COLORS } from "@/lib/constants";
 
 export function CategoryFilter({
   activeCategory,
@@ -16,25 +16,30 @@ export function CategoryFilter({
         href={`/${activeTag ? `?tag=${encodeURIComponent(activeTag)}` : ""}`}
         className={`rounded-full px-3 py-1.5 text-sm font-medium transition ${
           !activeCategory
-            ? "bg-rose-400 text-white"
-            : "bg-white/70 text-foreground/70 hover:bg-rose-50 dark:bg-white/5"
+            ? "bg-accent text-white"
+            : "bg-white/70 text-foreground/70 hover:bg-accent-soft dark:bg-white/5"
         }`}
       >
         すべて
       </Link>
-      {CATEGORIES.map((category) => (
-        <Link
-          key={category}
-          href={`/?category=${encodeURIComponent(category)}${tagQuery}`}
-          className={`rounded-full px-3 py-1.5 text-sm font-medium transition ${
-            activeCategory === category
-              ? "bg-rose-400 text-white"
-              : "bg-white/70 text-foreground/70 hover:bg-rose-50 dark:bg-white/5"
-          }`}
-        >
-          {category}
-        </Link>
-      ))}
+      {CATEGORIES.map((category) => {
+        const { bg, fg } = CATEGORY_COLORS[category];
+        const isActive = activeCategory === category;
+        return (
+          <Link
+            key={category}
+            href={`/?category=${encodeURIComponent(category)}${tagQuery}`}
+            className="rounded-full px-3 py-1.5 text-sm font-medium transition hover:opacity-80"
+            style={
+              isActive
+                ? { backgroundColor: fg, color: "#ffffff" }
+                : { backgroundColor: bg, color: fg }
+            }
+          >
+            {category}
+          </Link>
+        );
+      })}
     </div>
   );
 }

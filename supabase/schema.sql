@@ -16,6 +16,8 @@ create table recipes (
   id uuid primary key default gen_random_uuid(),
   source_url text not null,
   category recipe_category not null,
+  ingredients text,
+  steps text,
   note text,
   created_at timestamptz not null default now()
 );
@@ -33,6 +35,14 @@ create table recipe_tags (
   primary key (recipe_id, tag_id)
 );
 
+-- 5. Webサイトからの自動取得が、ドメインごとに何回連続で失敗しているかを記録する
+create table fetch_failures (
+  domain text primary key,
+  consecutive_failures integer not null default 0,
+  last_failed_at timestamptz,
+  last_error text
+);
+
 -- 検索・絞り込み用インデックス
 create index idx_recipes_category on recipes(category);
 create index idx_recipe_tags_tag_id on recipe_tags(tag_id);
@@ -41,10 +51,12 @@ create index idx_tags_name on tags(name);
 
 -- Row Level Security
 -- 個人利用・認証なしのアプリのため anon キーで select / insert のみ許可する。
--- update / delete のポリシーは意図的に作成しない。
+-- fetch_failures のみ、失敗回数の更新のため update も許可する。
+-- delete のポリシーはどのテーブルにも意図的に作成しない。
 alter table recipes enable row level security;
 alter table tags enable row level security;
 alter table recipe_tags enable row level security;
+alter table fetch_failures enable row level security;
 
 create policy "public read recipes" on recipes for select using (true);
 create policy "public insert recipes" on recipes for insert with check (true);
@@ -52,3 +64,6 @@ create policy "public read tags" on tags for select using (true);
 create policy "public insert tags" on tags for insert with check (true);
 create policy "public read recipe_tags" on recipe_tags for select using (true);
 create policy "public insert recipe_tags" on recipe_tags for insert with check (true);
+create policy "public read fetch_failures" on fetch_failures for select using (true);
+create policy "public insert fetch_failures" on fetch_failures for insert with check (true);
+create policy "public update fetch_failures" on fetch_failures for update using (true) with check (true);

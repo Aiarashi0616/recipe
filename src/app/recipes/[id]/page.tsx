@@ -31,7 +31,7 @@ export default async function RecipeDetailPage(props: PageProps<"/recipes/[id]">
               <Link
                 key={tag}
                 href={`/?tag=${encodeURIComponent(tag)}`}
-                className="rounded-full bg-orange-50 px-2.5 py-1 text-xs text-orange-600 transition hover:bg-orange-100 dark:bg-orange-950/40 dark:text-orange-300"
+                className="rounded-full bg-tag-bg px-2.5 py-1 text-xs text-tag-fg transition hover:opacity-80"
               >
                 #{tag}
               </Link>
@@ -43,10 +43,26 @@ export default async function RecipeDetailPage(props: PageProps<"/recipes/[id]">
           href={recipe.source_url}
           target="_blank"
           rel="noopener noreferrer"
-          className="mt-4 block truncate rounded-xl bg-rose-50 px-4 py-2.5 text-sm text-rose-600 underline dark:bg-rose-950/30 dark:text-rose-300"
+          className="mt-4 block truncate rounded-xl bg-accent-soft px-4 py-2.5 text-sm text-accent underline"
         >
           {recipe.source_url}
         </a>
+
+        {recipe.ingredients && (
+          <div className="mt-4">
+            <h2 className="text-sm font-semibold text-foreground/70">材料</h2>
+            <p className="mt-1 whitespace-pre-wrap text-sm text-foreground/80">
+              {recipe.ingredients}
+            </p>
+          </div>
+        )}
+
+        {recipe.steps && (
+          <div className="mt-4">
+            <h2 className="text-sm font-semibold text-foreground/70">作り方</h2>
+            <p className="mt-1 whitespace-pre-wrap text-sm text-foreground/80">{recipe.steps}</p>
+          </div>
+        )}
 
         {recipe.note && (
           <p className="mt-4 whitespace-pre-wrap text-sm text-foreground/80">{recipe.note}</p>

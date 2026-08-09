@@ -2,6 +2,8 @@
 
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { extractRecipeFromUrl, getDomain, isInstagramUrl } from "@/lib/recipeExtractor";
+import { recordFetchFailure, recordFetchSuccess } from "@/lib/fetchFailures";
 import type { Category } from "@/lib/constants";
 import type { RecipeWithTags } from "@/lib/types";
 
@@ -9,6 +11,8 @@ export async function createRecipe(formData: FormData) {
   const sourceUrl = String(formData.get("source_url") ?? "").trim();
   const category = String(formData.get("category") ?? "") as Category;
   const note = String(formData.get("note") ?? "").trim();
+  let ingredients = String(formData.get("ingredients") ?? "").trim();
+  let steps = String(formData.get("steps") ?? "").trim();
   const tagsRaw = String(formData.get("tags") ?? "");
   const tagNames = Array.from(
     new Set(
@@ -23,11 +27,29 @@ export async function createRecipe(formData: FormData) {
     throw new Error("URLとカテゴリは必須です。");
   }
 
+  if (!ingredients && !steps && !isInstagramUrl(sourceUrl)) {
+    const domain = getDomain(sourceUrl);
+    const extracted = await extractRecipeFromUrl(sourceUrl);
+    if (extracted) {
+      ingredients = extracted.ingredients;
+      steps = extracted.steps;
+      await recordFetchSuccess(domain);
+    } else {
+      await recordFetchFailure(domain, "構造化データ(JSON-LD Recipe)が見つかりませんでした");
+    }
+  }
+
   const supabase = createClient();
 
   const { data: recipe, error: recipeError } = await supabase
     .from("recipes")
-    .insert({ source_url: sourceUrl, category, note: note || null })
+    .insert({
+      source_url: sourceUrl,
+      category,
+      ingredients: ingredients || null,
+      steps: steps || null,
+      note: note || null,
+    })
     .select("id")
     .single();
 
@@ -91,7 +113,9 @@ export async function listRecipes(filters: {
 
   let query = supabase
     .from("recipes")
-    .select("id, source_url, category, note, created_at, recipe_tags(tags(name))")
+    .select(
+      "id, source_url, category, ingredients, steps, note, created_at, recipe_tags(tags(name))"
+    )
     .order("created_at", { ascending: false });
 
   if (filters.category) {
@@ -110,6 +134,8 @@ export async function listRecipes(filters: {
     id: r.id,
     source_url: r.source_url,
     category: r.category,
+    ingredients: r.ingredients,
+    steps: r.steps,
     note: r.note,
     created_at: r.created_at,
     tags: (r.recipe_tags ?? [])
@@ -122,7 +148,9 @@ export async function getRecipeById(id: string): Promise<RecipeWithTags | null> 
   const supabase = createClient();
   const { data, error } = await supabase
     .from("recipes")
-    .select("id, source_url, category, note, created_at, recipe_tags(tags(name))")
+    .select(
+      "id, source_url, category, ingredients, steps, note, created_at, recipe_tags(tags(name))"
+    )
     .eq("id", id)
     .maybeSingle();
 
@@ -137,6 +165,8 @@ export async function getRecipeById(id: string): Promise<RecipeWithTags | null> 
     id: data.id,
     source_url: data.source_url,
     category: data.category,
+    ingredients: data.ingredients,
+    steps: data.steps,
     note: data.note,
     created_at: data.created_at,
     tags: (data.recipe_tags ?? [])

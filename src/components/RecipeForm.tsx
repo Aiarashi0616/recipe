@@ -14,8 +14,11 @@ export function RecipeForm() {
           type="url"
           required
           placeholder="https://cookpad.com/..."
-          className="rounded-xl border border-black/10 bg-white/80 px-4 py-2.5 outline-none focus:border-rose-300 dark:bg-white/5"
+          className="rounded-xl border border-black/10 bg-white/80 px-4 py-2.5 outline-none focus:border-accent dark:bg-white/5"
         />
+        <p className="text-xs text-foreground/50">
+          Webサイトの場合は保存時に材料・作り方の自動取得を試みます（対応していないサイトは空欄のまま保存されるので、その場合は下に直接入力してください）。Instagramは自動取得非対応のため、材料・作り方は直接入力してください。
+        </p>
       </div>
 
       <div className="flex flex-col gap-1.5">
@@ -27,7 +30,7 @@ export function RecipeForm() {
           name="category"
           required
           defaultValue=""
-          className="rounded-xl border border-black/10 bg-white/80 px-4 py-2.5 outline-none focus:border-rose-300 dark:bg-white/5"
+          className="rounded-xl border border-black/10 bg-white/80 px-4 py-2.5 outline-none focus:border-accent dark:bg-white/5"
         >
           <option value="" disabled>
             選択してください
@@ -49,9 +52,35 @@ export function RecipeForm() {
           name="tags"
           type="text"
           placeholder="鶏肉, 玉ねぎ, にんじん"
-          className="rounded-xl border border-black/10 bg-white/80 px-4 py-2.5 outline-none focus:border-rose-300 dark:bg-white/5"
+          className="rounded-xl border border-black/10 bg-white/80 px-4 py-2.5 outline-none focus:border-accent dark:bg-white/5"
         />
         <p className="text-xs text-foreground/50">カンマまたはスペース区切りで複数入力できます</p>
+      </div>
+
+      <div className="flex flex-col gap-1.5">
+        <label htmlFor="ingredients" className="text-sm font-semibold">
+          材料
+        </label>
+        <textarea
+          id="ingredients"
+          name="ingredients"
+          rows={4}
+          placeholder={"鶏もも肉 300g\n玉ねぎ 1個\n..."}
+          className="rounded-xl border border-black/10 bg-white/80 px-4 py-2.5 outline-none focus:border-accent dark:bg-white/5"
+        />
+      </div>
+
+      <div className="flex flex-col gap-1.5">
+        <label htmlFor="steps" className="text-sm font-semibold">
+          作り方
+        </label>
+        <textarea
+          id="steps"
+          name="steps"
+          rows={5}
+          placeholder={"1. 鶏肉を一口大に切る\n2. 玉ねぎをスライスする\n..."}
+          className="rounded-xl border border-black/10 bg-white/80 px-4 py-2.5 outline-none focus:border-accent dark:bg-white/5"
+        />
       </div>
 
       <div className="flex flex-col gap-1.5">
@@ -63,13 +92,13 @@ export function RecipeForm() {
           name="note"
           rows={3}
           placeholder="大人の味付け前に子ども分を取り分ける、など"
-          className="rounded-xl border border-black/10 bg-white/80 px-4 py-2.5 outline-none focus:border-rose-300 dark:bg-white/5"
+          className="rounded-xl border border-black/10 bg-white/80 px-4 py-2.5 outline-none focus:border-accent dark:bg-white/5"
         />
       </div>
 
       <button
         type="submit"
-        className="mt-2 rounded-full bg-rose-400 px-5 py-3 font-semibold text-white shadow-sm transition hover:bg-rose-500"
+        className="mt-2 rounded-full bg-accent px-5 py-3 font-semibold text-white shadow-sm transition hover:bg-accent-hover"
       >
         保存
       </button>

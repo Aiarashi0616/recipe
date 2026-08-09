@@ -4,6 +4,8 @@ export type Recipe = {
   id: string;
   source_url: string;
   category: Category;
+  ingredients: string | null;
+  steps: string | null;
   note: string | null;
   created_at: string;
 };
