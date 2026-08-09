@@ -23,6 +23,7 @@ create table recipes (
   steps text,
   note text,
   baby_food_note text,
+  prep_minutes integer,
   created_at timestamptz not null default now(),
   deleted_at timestamptz
 );
@@ -82,6 +83,14 @@ create table household_rules (
   removed_at timestamptz
 );
 
+-- ユーザーごとの調理時間の目安（平日・土日）。将来ほかの「我が家のルール」の
+-- 構造化設定を置く場所としても使う想定で、1ユーザー1行のテーブルにしている。
+create table household_settings (
+  user_id uuid primary key default auth.uid() references auth.users(id),
+  weekday_time_limit_minutes integer,
+  weekend_time_limit_minutes integer
+);
+
 -- 検索・絞り込み用インデックス
 create index idx_recipes_category on recipes(category);
 create index idx_recipes_user_id on recipes(user_id);
@@ -100,6 +109,7 @@ alter table recipe_tags enable row level security;
 alter table fetch_failures enable row level security;
 alter table family_members enable row level security;
 alter table household_rules enable row level security;
+alter table household_settings enable row level security;
 
 create policy "owner select recipes" on recipes for select using (auth.uid() = user_id);
 create policy "owner insert recipes" on recipes for insert with check (auth.uid() = user_id);
@@ -132,3 +142,7 @@ create policy "owner update family_members" on family_members for update using (
 create policy "owner select household_rules" on household_rules for select using (auth.uid() = user_id);
 create policy "owner insert household_rules" on household_rules for insert with check (auth.uid() = user_id);
 create policy "owner update household_rules" on household_rules for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+create policy "owner select household_settings" on household_settings for select using (auth.uid() = user_id);
+create policy "owner insert household_settings" on household_settings for insert with check (auth.uid() = user_id);
+create policy "owner update household_settings" on household_settings for update using (auth.uid() = user_id) with check (auth.uid() = user_id);

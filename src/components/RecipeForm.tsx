@@ -57,6 +57,23 @@ export function RecipeForm() {
       </div>
 
       <div className="flex flex-col gap-1.5">
+        <label htmlFor="prep_minutes" className="text-sm font-semibold">
+          調理時間（分）
+        </label>
+        <input
+          id="prep_minutes"
+          name="prep_minutes"
+          type="number"
+          min={1}
+          placeholder="30"
+          className="rounded-xl border border-black/10 bg-white/80 px-4 py-2.5 outline-none focus:border-accent dark:bg-white/5"
+        />
+        <p className="text-xs text-foreground/50">
+          空欄の場合、Webサイトから自動取得できたときは自動で入ります
+        </p>
+      </div>
+
+      <div className="flex flex-col gap-1.5">
         <label htmlFor="tags" className="text-sm font-semibold">
           メイン食材（タグ）
         </label>

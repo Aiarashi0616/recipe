@@ -39,6 +39,8 @@ export async function createRecipe(formData: FormData) {
   const category = String(formData.get("category") ?? "") as Category;
   const note = String(formData.get("note") ?? "").trim();
   const babyFoodNote = String(formData.get("baby_food_note") ?? "").trim();
+  const prepMinutesRaw = String(formData.get("prep_minutes") ?? "").trim();
+  let prepMinutes: number | null = prepMinutesRaw ? Number(prepMinutesRaw) : null;
   let ingredients = String(formData.get("ingredients") ?? "").trim();
   let steps = String(formData.get("steps") ?? "").trim();
   const tagsRaw = String(formData.get("tags") ?? "");
@@ -61,6 +63,9 @@ export async function createRecipe(formData: FormData) {
     if (extracted) {
       ingredients = extracted.ingredients;
       steps = extracted.steps;
+      if (prepMinutes === null) {
+        prepMinutes = extracted.prepMinutes;
+      }
       await recordFetchSuccess(domain);
     } else {
       await recordFetchFailure(domain, "構造化データ(JSON-LD Recipe)が見つかりませんでした");
@@ -79,6 +84,7 @@ export async function createRecipe(formData: FormData) {
       steps: steps || null,
       note: note || null,
       baby_food_note: babyFoodNote || null,
+      prep_minutes: prepMinutes,
     })
     .select("id")
     .single();
@@ -106,7 +112,7 @@ export async function createRecipe(formData: FormData) {
 }
 
 const RECIPE_SELECT =
-  "id, title, source_url, category, ingredients, steps, note, baby_food_note, created_at";
+  "id, title, source_url, category, ingredients, steps, note, baby_food_note, prep_minutes, created_at";
 
 type RecipeRow = {
   id: string;
@@ -117,6 +123,7 @@ type RecipeRow = {
   steps: string | null;
   note: string | null;
   baby_food_note: string | null;
+  prep_minutes: number | null;
   created_at: string;
 };
 
@@ -130,6 +137,7 @@ function mapRecipeRow(r: RecipeRow, tags: string[]): RecipeWithTags {
     steps: r.steps,
     note: r.note,
     baby_food_note: r.baby_food_note,
+    prep_minutes: r.prep_minutes,
     created_at: r.created_at,
     tags,
   };
@@ -280,6 +288,7 @@ export async function updateRecipe(id: string, formData: FormData) {
   const steps = String(formData.get("steps") ?? "").trim();
   const note = String(formData.get("note") ?? "").trim();
   const babyFoodNote = String(formData.get("baby_food_note") ?? "").trim();
+  const prepMinutesRaw = String(formData.get("prep_minutes") ?? "").trim();
 
   if (!sourceUrl || !category) {
     throw new Error("URLとカテゴリは必須です。");
@@ -296,6 +305,7 @@ export async function updateRecipe(id: string, formData: FormData) {
       steps: steps || null,
       note: note || null,
       baby_food_note: babyFoodNote || null,
+      prep_minutes: prepMinutesRaw ? Number(prepMinutesRaw) : null,
     })
     .eq("id", id);
 
@@ -419,6 +429,26 @@ async function getFamilyExclusionTerms(
   };
 }
 
+// 今日（サーバー時刻基準）が平日か土日かに応じて、我が家の調理時間の目安を取得する
+async function getTodayTimeLimitMinutes(supabase: SupabaseClient): Promise<number | null> {
+  const { data, error } = await supabase
+    .from("household_settings")
+    .select("weekday_time_limit_minutes, weekend_time_limit_minutes")
+    .maybeSingle();
+
+  if (error || !data) {
+    return null;
+  }
+
+  const dayOfWeek = new Date().getDay(); // 0=日, 6=土
+  const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+  const row = data as unknown as {
+    weekday_time_limit_minutes: number | null;
+    weekend_time_limit_minutes: number | null;
+  };
+  return isWeekend ? row.weekend_time_limit_minutes : row.weekday_time_limit_minutes;
+}
+
 export async function getMealSuggestions(
   recipeId: string,
   category: Category
@@ -426,6 +456,7 @@ export async function getMealSuggestions(
   const supabase = await createClient();
   const companionCategories = MEAL_COMPANION_CATEGORIES.filter((c) => c !== category);
   const { allergyTerms, dislikeTerms } = await getFamilyExclusionTerms(supabase);
+  const timeLimitMinutes = await getTodayTimeLimitMinutes(supabase);
 
   const suggestions: MealSuggestion[] = [];
   for (const companionCategory of companionCategories) {
@@ -446,13 +477,17 @@ export async function getMealSuggestions(
       candidates.map((c) => c.id)
     );
 
-    // アレルギーは安全のため常に除外し、苦手食材は他に選べる場合だけ避ける
+    // アレルギーは安全のため常に除外し、苦手食材・調理時間オーバーは他に選べる場合だけ避ける
     const withoutAllergens = candidates.filter(
       (c) => !matchesAnyTerm(tagsMap.get(c.id) ?? [], allergyTerms)
     );
-    const preferred = withoutAllergens.filter(
+    const withoutDisliked = withoutAllergens.filter(
       (c) => !matchesAnyTerm(tagsMap.get(c.id) ?? [], dislikeTerms)
     );
+    const preferred =
+      timeLimitMinutes === null
+        ? withoutDisliked
+        : withoutDisliked.filter((c) => c.prep_minutes === null || c.prep_minutes <= timeLimitMinutes);
     const pool = preferred.length > 0 ? preferred : withoutAllergens;
 
     const picked = pool.length > 0 ? pool[Math.floor(Math.random() * pool.length)] : null;

@@ -8,7 +8,7 @@ import type {
   PortionSize,
   TastePreference,
 } from "@/lib/constants";
-import type { FamilyMember, HouseholdRule } from "@/lib/types";
+import type { FamilyMember, HouseholdRule, HouseholdSettings } from "@/lib/types";
 
 export async function getFamilyMembers(): Promise<FamilyMember[]> {
   const supabase = await createClient();
@@ -113,6 +113,39 @@ export async function removeHouseholdRule(id: string) {
     .from("household_rules")
     .update({ removed_at: new Date().toISOString() })
     .eq("id", id);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  revalidatePath("/family");
+}
+
+export async function getHouseholdSettings(): Promise<HouseholdSettings> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("household_settings")
+    .select("weekday_time_limit_minutes, weekend_time_limit_minutes")
+    .maybeSingle();
+
+  if (error || !data) {
+    return { weekday_time_limit_minutes: null, weekend_time_limit_minutes: null };
+  }
+  return data as unknown as HouseholdSettings;
+}
+
+export async function updateHouseholdSettings(formData: FormData) {
+  const weekdayRaw = String(formData.get("weekday_time_limit_minutes") ?? "").trim();
+  const weekendRaw = String(formData.get("weekend_time_limit_minutes") ?? "").trim();
+
+  const supabase = await createClient();
+  const { error } = await supabase.from("household_settings").upsert(
+    {
+      weekday_time_limit_minutes: weekdayRaw ? Number(weekdayRaw) : null,
+      weekend_time_limit_minutes: weekendRaw ? Number(weekendRaw) : null,
+    },
+    { onConflict: "user_id" }
+  );
 
   if (error) {
     throw new Error(error.message);

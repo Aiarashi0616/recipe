@@ -3,8 +3,10 @@ import {
   addHouseholdRule,
   getFamilyMembers,
   getHouseholdRules,
+  getHouseholdSettings,
   removeFamilyMember,
   removeHouseholdRule,
+  updateHouseholdSettings,
 } from "@/app/actions/family";
 import { ConfirmActionButton } from "@/components/ConfirmActionButton";
 import {
@@ -18,7 +20,11 @@ const fieldClass =
   "rounded-xl border border-black/10 bg-white/80 px-4 py-2.5 outline-none focus:border-accent dark:bg-white/5";
 
 export default async function FamilyPage() {
-  const [members, rules] = await Promise.all([getFamilyMembers(), getHouseholdRules()]);
+  const [members, rules, settings] = await Promise.all([
+    getFamilyMembers(),
+    getHouseholdRules(),
+    getHouseholdSettings(),
+  ]);
 
   return (
     <div className="flex flex-col gap-10">
@@ -242,6 +248,55 @@ export default async function FamilyPage() {
             className="mt-2 rounded-full bg-accent px-5 py-3 font-semibold text-white shadow-sm transition hover:bg-accent-hover"
           >
             追加する
+          </button>
+        </form>
+      </section>
+
+      <section className="flex flex-col gap-4">
+        <div>
+          <h2 className="text-xl font-bold">調理時間の目安</h2>
+          <p className="mt-1 text-sm text-foreground/60">
+            献立のおすすめ組み合わせで、この時間を超えるレシピは（他に選べる場合）避けるようにします。
+          </p>
+        </div>
+
+        <form
+          action={updateHouseholdSettings}
+          className="flex flex-col gap-4 rounded-2xl border border-black/5 bg-white/70 p-5 shadow-sm dark:bg-white/5 sm:flex-row sm:items-end"
+        >
+          <div className="flex flex-1 flex-col gap-1.5">
+            <label htmlFor="weekday_time_limit_minutes" className="text-sm font-semibold">
+              平日の目安（分）
+            </label>
+            <input
+              id="weekday_time_limit_minutes"
+              name="weekday_time_limit_minutes"
+              type="number"
+              min={1}
+              defaultValue={settings.weekday_time_limit_minutes ?? ""}
+              placeholder="30"
+              className={fieldClass}
+            />
+          </div>
+          <div className="flex flex-1 flex-col gap-1.5">
+            <label htmlFor="weekend_time_limit_minutes" className="text-sm font-semibold">
+              土日の目安（分）
+            </label>
+            <input
+              id="weekend_time_limit_minutes"
+              name="weekend_time_limit_minutes"
+              type="number"
+              min={1}
+              defaultValue={settings.weekend_time_limit_minutes ?? ""}
+              placeholder="60"
+              className={fieldClass}
+            />
+          </div>
+          <button
+            type="submit"
+            className="shrink-0 rounded-full bg-accent px-5 py-3 font-semibold text-white shadow-sm transition hover:bg-accent-hover"
+          >
+            保存
           </button>
         </form>
       </section>

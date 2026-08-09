@@ -3,6 +3,7 @@ type JsonLdNode = Record<string, unknown>;
 type ExtractedRecipe = {
   ingredients: string;
   steps: string;
+  prepMinutes: number | null;
 };
 
 export function isInstagramUrl(url: string): boolean {
@@ -48,7 +49,9 @@ export async function extractRecipeFromUrl(url: string): Promise<ExtractedRecipe
     return null;
   }
 
-  return { ingredients, steps };
+  const prepMinutes = extractPrepMinutes(recipeNode);
+
+  return { ingredients, steps, prepMinutes };
 }
 
 function findRecipeNode(html: string): JsonLdNode | null {
@@ -123,6 +126,26 @@ function extractSteps(node: JsonLdNode): string {
   const lines: string[] = [];
   flattenInstructions(raw, lines);
   return lines.filter(Boolean).join("\n");
+}
+
+function extractPrepMinutes(node: JsonLdNode): number | null {
+  const raw = node["totalTime"] ?? node["cookTime"] ?? node["prepTime"];
+  if (typeof raw !== "string") {
+    return null;
+  }
+  return parseDurationToMinutes(raw);
+}
+
+// ISO 8601 の時間表記（例: "PT30M", "PT1H", "PT1H30M"）を分に変換する
+function parseDurationToMinutes(duration: string): number | null {
+  const match = /^P(?:\d+D)?T(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?$/.exec(duration.trim());
+  if (!match) {
+    return null;
+  }
+  const hours = Number(match[1] ?? 0);
+  const minutes = Number(match[2] ?? 0);
+  const totalMinutes = hours * 60 + minutes;
+  return totalMinutes > 0 ? totalMinutes : null;
 }
 
 function flattenInstructions(value: unknown, out: string[]): void {

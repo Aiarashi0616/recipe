@@ -9,7 +9,12 @@ export function RecipeCard({ recipe }: { recipe: RecipeWithTags }) {
       className="block rounded-2xl border border-black/5 bg-white/70 p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md dark:bg-white/5"
     >
       <div className="flex items-center justify-between gap-2">
-        <CategoryBadge category={recipe.category} />
+        <div className="flex items-center gap-2">
+          <CategoryBadge category={recipe.category} />
+          {recipe.prep_minutes && (
+            <span className="text-xs text-foreground/50">⏱️ {recipe.prep_minutes}分</span>
+          )}
+        </div>
         <span className="text-xs text-foreground/50">
           {new Date(recipe.created_at).toLocaleDateString("ja-JP")}
         </span>

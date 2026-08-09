@@ -9,6 +9,7 @@ export type Recipe = {
   steps: string | null;
   note: string | null;
   baby_food_note: string | null;
+  prep_minutes: number | null;
   created_at: string;
 };
 
@@ -35,4 +36,9 @@ export type HouseholdRule = {
   id: string;
   rule_text: string;
   created_at: string;
+};
+
+export type HouseholdSettings = {
+  weekday_time_limit_minutes: number | null;
+  weekend_time_limit_minutes: number | null;
 };

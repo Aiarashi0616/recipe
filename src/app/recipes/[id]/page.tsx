@@ -34,7 +34,12 @@ export default async function RecipeDetailPage(props: PageProps<"/recipes/[id]">
 
       <div className="rounded-2xl border border-black/5 bg-white/70 p-5 shadow-sm dark:bg-white/5">
         <div className="flex items-center justify-between gap-2">
-          <CategoryBadge category={recipe.category} size="lg" />
+          <div className="flex items-center gap-2">
+            <CategoryBadge category={recipe.category} size="lg" />
+            {recipe.prep_minutes && (
+              <span className="text-xs text-foreground/50">⏱️ {recipe.prep_minutes}分</span>
+            )}
+          </div>
           <span className="text-xs text-foreground/50">
             {new Date(recipe.created_at).toLocaleDateString("ja-JP")}
           </span>
@@ -101,6 +106,11 @@ export default async function RecipeDetailPage(props: PageProps<"/recipes/[id]">
                 >
                   {suggested.title ??
                     (suggested.tags.length > 0 ? suggested.tags.join("・") : "レシピを見る")}
+                  {suggested.prep_minutes && (
+                    <span className="ml-1.5 text-xs font-normal text-foreground/40">
+                      ⏱️{suggested.prep_minutes}分
+                    </span>
+                  )}
                 </Link>
               ) : (
                 <p className="mt-2 text-xs text-foreground/40">
