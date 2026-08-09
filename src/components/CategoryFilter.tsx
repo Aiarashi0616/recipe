@@ -3,17 +3,17 @@ import { CATEGORIES, CATEGORY_COLORS } from "@/lib/constants";
 
 export function CategoryFilter({
   activeCategory,
-  activeTag,
+  activeQuery,
 }: {
   activeCategory?: string;
-  activeTag?: string;
+  activeQuery?: string;
 }) {
-  const tagQuery = activeTag ? `&tag=${encodeURIComponent(activeTag)}` : "";
+  const qQuery = activeQuery ? `&q=${encodeURIComponent(activeQuery)}` : "";
 
   return (
     <div className="flex flex-wrap gap-2">
       <Link
-        href={`/${activeTag ? `?tag=${encodeURIComponent(activeTag)}` : ""}`}
+        href={`/${activeQuery ? `?q=${encodeURIComponent(activeQuery)}` : ""}`}
         className={`rounded-full px-3 py-1.5 text-sm font-medium transition ${
           !activeCategory
             ? "bg-accent text-white"
@@ -28,7 +28,7 @@ export function CategoryFilter({
         return (
           <Link
             key={category}
-            href={`/?category=${encodeURIComponent(category)}${tagQuery}`}
+            href={`/?category=${encodeURIComponent(category)}${qQuery}`}
             className="rounded-full px-3 py-1.5 text-sm font-medium transition hover:opacity-80"
             style={
               isActive

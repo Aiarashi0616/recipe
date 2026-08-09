@@ -29,9 +29,6 @@ export function RecipeCard({ recipe }: { recipe: RecipeWithTags }) {
           ))}
         </div>
       )}
-      {recipe.note && (
-        <p className="mt-2 line-clamp-2 text-sm text-foreground/70">{recipe.note}</p>
-      )}
     </Link>
   );
 }

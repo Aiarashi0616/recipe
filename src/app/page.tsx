@@ -6,14 +6,14 @@ import { TagFilter } from "@/components/TagFilter";
 export default async function Home(props: PageProps<"/">) {
   const searchParams = await props.searchParams;
   const category = typeof searchParams.category === "string" ? searchParams.category : undefined;
-  const tag = typeof searchParams.tag === "string" ? searchParams.tag : undefined;
+  const q = typeof searchParams.q === "string" ? searchParams.q : undefined;
 
-  const recipes = await listRecipes({ category, tag });
+  const recipes = await listRecipes({ category, q });
 
   return (
     <div className="flex flex-col gap-5">
-      <TagFilter activeCategory={category} activeTag={tag} />
-      <CategoryFilter activeCategory={category} activeTag={tag} />
+      <TagFilter activeCategory={category} activeQuery={q} />
+      <CategoryFilter activeCategory={category} activeQuery={q} />
 
       {recipes.length === 0 ? (
         <p className="mt-8 text-center text-sm text-foreground/50">

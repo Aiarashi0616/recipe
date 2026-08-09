@@ -95,45 +95,23 @@ export async function createRecipe(formData: FormData) {
   redirect(`/recipes/${recipe.id}`);
 }
 
-export async function listRecipes(filters: {
-  category?: string;
-  tag?: string;
-}): Promise<RecipeWithTags[]> {
-  const supabase = createClient();
+const RECIPE_SELECT =
+  "id, title, source_url, category, ingredients, steps, note, created_at, recipe_tags(tags(name))";
 
-  let recipeIdsFilter: string[] | null = null;
-  if (filters.tag) {
-    const { data: tagRows } = await supabase
-      .from("recipe_tags")
-      .select("recipe_id, tags!inner(name)")
-      .eq("tags.name", filters.tag);
-    recipeIdsFilter = (tagRows ?? []).map((r) => r.recipe_id);
-    if (recipeIdsFilter.length === 0) {
-      return [];
-    }
-  }
+type RecipeRow = {
+  id: string;
+  title: string | null;
+  source_url: string;
+  category: Category;
+  ingredients: string | null;
+  steps: string | null;
+  note: string | null;
+  created_at: string;
+  recipe_tags: { tags: { name: string } | null }[] | null;
+};
 
-  let query = supabase
-    .from("recipes")
-    .select(
-      "id, title, source_url, category, ingredients, steps, note, created_at, recipe_tags(tags(name))"
-    )
-    .is("deleted_at", null)
-    .order("created_at", { ascending: false });
-
-  if (filters.category) {
-    query = query.eq("category", filters.category);
-  }
-  if (recipeIdsFilter) {
-    query = query.in("id", recipeIdsFilter);
-  }
-
-  const { data, error } = await query;
-  if (error) {
-    throw new Error(error.message);
-  }
-
-  return (data ?? []).map((r) => ({
+function mapRecipeRow(r: RecipeRow): RecipeWithTags {
+  return {
     id: r.id,
     title: r.title,
     source_url: r.source_url,
@@ -143,18 +121,87 @@ export async function listRecipes(filters: {
     note: r.note,
     created_at: r.created_at,
     tags: (r.recipe_tags ?? [])
-      .map((rt) => (rt as unknown as { tags: { name: string } | null }).tags?.name)
+      .map((rt) => rt.tags?.name)
       .filter((n): n is string => Boolean(n)),
-  }));
+  };
+}
+
+export async function listRecipes(filters: {
+  category?: string;
+  q?: string;
+}): Promise<RecipeWithTags[]> {
+  const supabase = createClient();
+
+  if (!filters.q) {
+    let query = supabase
+      .from("recipes")
+      .select(RECIPE_SELECT)
+      .is("deleted_at", null)
+      .order("created_at", { ascending: false });
+
+    if (filters.category) {
+      query = query.eq("category", filters.category);
+    }
+
+    const { data, error } = await query;
+    if (error) {
+      throw new Error(error.message);
+    }
+    return (data ?? []).map((r) => mapRecipeRow(r as unknown as RecipeRow));
+  }
+
+  // 料理名（部分一致）または材料タグ（部分一致）のどちらかにマッチするレシピを検索する
+  const { data: tagRows } = await supabase
+    .from("recipe_tags")
+    .select("recipe_id, tags!inner(name)")
+    .ilike("tags.name", `%${filters.q}%`);
+  const tagMatchedIds = (tagRows ?? []).map((r) => r.recipe_id);
+
+  let titleQuery = supabase
+    .from("recipes")
+    .select(RECIPE_SELECT)
+    .is("deleted_at", null)
+    .ilike("title", `%${filters.q}%`);
+  if (filters.category) {
+    titleQuery = titleQuery.eq("category", filters.category);
+  }
+  const { data: titleMatches, error: titleError } = await titleQuery;
+  if (titleError) {
+    throw new Error(titleError.message);
+  }
+
+  let tagMatches: RecipeRow[] = [];
+  if (tagMatchedIds.length > 0) {
+    let tagQuery = supabase
+      .from("recipes")
+      .select(RECIPE_SELECT)
+      .is("deleted_at", null)
+      .in("id", tagMatchedIds);
+    if (filters.category) {
+      tagQuery = tagQuery.eq("category", filters.category);
+    }
+    const { data, error: tagError } = await tagQuery;
+    if (tagError) {
+      throw new Error(tagError.message);
+    }
+    tagMatches = (data ?? []) as unknown as RecipeRow[];
+  }
+
+  const merged = new Map<string, RecipeRow>();
+  for (const r of [...((titleMatches ?? []) as unknown as RecipeRow[]), ...tagMatches]) {
+    merged.set(r.id, r);
+  }
+
+  return Array.from(merged.values())
+    .sort((a, b) => (a.created_at < b.created_at ? 1 : -1))
+    .map(mapRecipeRow);
 }
 
 export async function getRecipeById(id: string): Promise<RecipeWithTags | null> {
   const supabase = createClient();
   const { data, error } = await supabase
     .from("recipes")
-    .select(
-      "id, title, source_url, category, ingredients, steps, note, created_at, recipe_tags(tags(name))"
-    )
+    .select(RECIPE_SELECT)
     .eq("id", id)
     .is("deleted_at", null)
     .maybeSingle();
@@ -166,19 +213,7 @@ export async function getRecipeById(id: string): Promise<RecipeWithTags | null> 
     return null;
   }
 
-  return {
-    id: data.id,
-    title: data.title,
-    source_url: data.source_url,
-    category: data.category,
-    ingredients: data.ingredients,
-    steps: data.steps,
-    note: data.note,
-    created_at: data.created_at,
-    tags: (data.recipe_tags ?? [])
-      .map((rt) => (rt as unknown as { tags: { name: string } | null }).tags?.name)
-      .filter((n): n is string => Boolean(n)),
-  };
+  return mapRecipeRow(data as unknown as RecipeRow);
 }
 
 export async function updateRecipe(id: string, formData: FormData) {

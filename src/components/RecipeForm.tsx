@@ -98,7 +98,7 @@ export function RecipeForm() {
 
       <div className="flex flex-col gap-1.5">
         <label htmlFor="note" className="text-sm font-semibold">
-          メモ
+          memo
         </label>
         <textarea
           id="note"
