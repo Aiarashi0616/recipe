@@ -93,6 +93,20 @@ export function EditRecipeForm({ recipe }: { recipe: RecipeWithTags }) {
         />
       </div>
 
+      <div className="flex flex-col gap-1.5">
+        <label htmlFor="baby_food_note" className="text-sm font-semibold">
+          離乳食アレンジ
+        </label>
+        <textarea
+          id="baby_food_note"
+          name="baby_food_note"
+          rows={3}
+          defaultValue={recipe.baby_food_note ?? ""}
+          placeholder="離乳食後期はレシピ通りで大人と同じでOK、など"
+          className="rounded-xl border border-black/10 bg-white/80 px-4 py-2.5 outline-none focus:border-accent dark:bg-white/5"
+        />
+      </div>
+
       <p className="text-xs text-foreground/50">
         メイン食材（タグ）は編集画面では変更できません。登録し直す場合は新規登録をご利用ください。
       </p>

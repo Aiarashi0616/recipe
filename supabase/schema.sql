@@ -20,6 +20,7 @@ create table recipes (
   ingredients text,
   steps text,
   note text,
+  baby_food_note text,
   created_at timestamptz not null default now(),
   deleted_at timestamptz
 );

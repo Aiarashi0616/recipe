@@ -109,6 +109,22 @@ export function RecipeForm() {
         />
       </div>
 
+      <div className="flex flex-col gap-1.5">
+        <label htmlFor="baby_food_note" className="text-sm font-semibold">
+          離乳食アレンジ
+        </label>
+        <textarea
+          id="baby_food_note"
+          name="baby_food_note"
+          rows={3}
+          placeholder="離乳食後期はレシピ通りで大人と同じでOK、など"
+          className="rounded-xl border border-black/10 bg-white/80 px-4 py-2.5 outline-none focus:border-accent dark:bg-white/5"
+        />
+        <p className="text-xs text-foreground/50">
+          空欄のまま保存して、後からClaude Codeに下書きをお願いすることもできます
+        </p>
+      </div>
+
       <button
         type="submit"
         className="mt-2 rounded-full bg-accent px-5 py-3 font-semibold text-white shadow-sm transition hover:bg-accent-hover"

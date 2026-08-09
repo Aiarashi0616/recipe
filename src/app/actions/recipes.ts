@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { extractRecipeFromUrl, getDomain, isInstagramUrl } from "@/lib/recipeExtractor";
 import { recordFetchFailure, recordFetchSuccess } from "@/lib/fetchFailures";
-import type { Category } from "@/lib/constants";
+import { MEAL_COMPANION_CATEGORIES, type Category } from "@/lib/constants";
 import type { RecipeWithTags } from "@/lib/types";
 
 export async function createRecipe(formData: FormData) {
@@ -12,6 +12,7 @@ export async function createRecipe(formData: FormData) {
   const sourceUrl = String(formData.get("source_url") ?? "").trim();
   const category = String(formData.get("category") ?? "") as Category;
   const note = String(formData.get("note") ?? "").trim();
+  const babyFoodNote = String(formData.get("baby_food_note") ?? "").trim();
   let ingredients = String(formData.get("ingredients") ?? "").trim();
   let steps = String(formData.get("steps") ?? "").trim();
   const tagsRaw = String(formData.get("tags") ?? "");
@@ -51,6 +52,7 @@ export async function createRecipe(formData: FormData) {
       ingredients: ingredients || null,
       steps: steps || null,
       note: note || null,
+      baby_food_note: babyFoodNote || null,
     })
     .select("id")
     .single();
@@ -96,7 +98,7 @@ export async function createRecipe(formData: FormData) {
 }
 
 const RECIPE_SELECT =
-  "id, title, source_url, category, ingredients, steps, note, created_at, recipe_tags(tags(name))";
+  "id, title, source_url, category, ingredients, steps, note, baby_food_note, created_at, recipe_tags(tags(name))";
 
 type RecipeRow = {
   id: string;
@@ -106,6 +108,7 @@ type RecipeRow = {
   ingredients: string | null;
   steps: string | null;
   note: string | null;
+  baby_food_note: string | null;
   created_at: string;
   recipe_tags: { tags: { name: string } | null }[] | null;
 };
@@ -119,6 +122,7 @@ function mapRecipeRow(r: RecipeRow): RecipeWithTags {
     ingredients: r.ingredients,
     steps: r.steps,
     note: r.note,
+    baby_food_note: r.baby_food_note,
     created_at: r.created_at,
     tags: (r.recipe_tags ?? [])
       .map((rt) => rt.tags?.name)
@@ -223,6 +227,7 @@ export async function updateRecipe(id: string, formData: FormData) {
   const ingredients = String(formData.get("ingredients") ?? "").trim();
   const steps = String(formData.get("steps") ?? "").trim();
   const note = String(formData.get("note") ?? "").trim();
+  const babyFoodNote = String(formData.get("baby_food_note") ?? "").trim();
 
   if (!sourceUrl || !category) {
     throw new Error("URLとカテゴリは必須です。");
@@ -238,6 +243,7 @@ export async function updateRecipe(id: string, formData: FormData) {
       ingredients: ingredients || null,
       steps: steps || null,
       note: note || null,
+      baby_food_note: babyFoodNote || null,
     })
     .eq("id", id);
 
@@ -260,4 +266,42 @@ export async function softDeleteRecipe(id: string) {
   }
 
   redirect("/");
+}
+
+export type MealSuggestion = {
+  category: Category;
+  recipe: RecipeWithTags | null;
+};
+
+export async function getMealSuggestions(
+  recipeId: string,
+  category: Category
+): Promise<MealSuggestion[]> {
+  const supabase = createClient();
+  const companionCategories = MEAL_COMPANION_CATEGORIES.filter((c) => c !== category);
+
+  const suggestions: MealSuggestion[] = [];
+  for (const companionCategory of companionCategories) {
+    const { data, error } = await supabase
+      .from("recipes")
+      .select(RECIPE_SELECT)
+      .eq("category", companionCategory)
+      .is("deleted_at", null)
+      .neq("id", recipeId);
+
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    const candidates = (data ?? []) as unknown as RecipeRow[];
+    const picked =
+      candidates.length > 0 ? candidates[Math.floor(Math.random() * candidates.length)] : null;
+
+    suggestions.push({
+      category: companionCategory,
+      recipe: picked ? mapRecipeRow(picked) : null,
+    });
+  }
+
+  return suggestions;
 }

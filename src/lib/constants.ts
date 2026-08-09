@@ -9,6 +9,10 @@ export const CATEGORIES = [
 
 export type Category = (typeof CATEGORIES)[number];
 
+// 献立の組み合わせ提案で対象にするカテゴリ（一汁三菜の考え方に合わせ、
+// 日々の主食の付け合わせとして必須ではないデザート・作り置きは除外）
+export const MEAL_COMPANION_CATEGORIES: Category[] = ["主菜", "副菜", "汁物・スープ"];
+
 export const CATEGORY_COLORS: Record<Category, { bg: string; fg: string }> = {
   主菜: { bg: "#e6d6d1", fg: "#8c5c52" },
   副菜: { bg: "#dde1d0", fg: "#66754e" },

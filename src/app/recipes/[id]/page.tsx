@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getRecipeById } from "@/app/actions/recipes";
+import { getMealSuggestions, getRecipeById } from "@/app/actions/recipes";
 import { CategoryBadge } from "@/components/CategoryBadge";
 import { DeleteRecipeButton } from "@/components/DeleteRecipeButton";
 
@@ -11,6 +11,8 @@ export default async function RecipeDetailPage(props: PageProps<"/recipes/[id]">
   if (!recipe) {
     notFound();
   }
+
+  const mealSuggestions = await getMealSuggestions(recipe.id, recipe.category);
 
   return (
     <div className="flex flex-col gap-5">
@@ -83,6 +85,42 @@ export default async function RecipeDetailPage(props: PageProps<"/recipes/[id]">
         {recipe.note && (
           <p className="mt-4 whitespace-pre-wrap text-sm text-foreground/80">{recipe.note}</p>
         )}
+
+        {recipe.baby_food_note && (
+          <div className="mt-4 rounded-xl bg-tag-bg/40 p-3">
+            <h2 className="text-sm font-semibold text-foreground/70">離乳食アレンジ</h2>
+            <p className="mt-1 whitespace-pre-wrap text-sm text-foreground/80">
+              {recipe.baby_food_note}
+            </p>
+          </div>
+        )}
+      </div>
+
+      <div className="rounded-2xl border border-black/5 bg-white/70 p-5 shadow-sm dark:bg-white/5">
+        <h2 className="text-sm font-semibold text-foreground/70">この献立のおすすめ組み合わせ</h2>
+        <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
+          {mealSuggestions.map(({ category, recipe: suggested }) => (
+            <div
+              key={category}
+              className="rounded-xl border border-black/5 bg-white/60 p-3 dark:bg-white/5"
+            >
+              <CategoryBadge category={category} />
+              {suggested ? (
+                <Link
+                  href={`/recipes/${suggested.id}`}
+                  className="mt-2 block text-sm font-medium text-foreground hover:underline"
+                >
+                  {suggested.title ??
+                    (suggested.tags.length > 0 ? suggested.tags.join("・") : "レシピを見る")}
+                </Link>
+              ) : (
+                <p className="mt-2 text-xs text-foreground/40">
+                  まだ{category}のレシピがありません
+                </p>
+              )}
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );

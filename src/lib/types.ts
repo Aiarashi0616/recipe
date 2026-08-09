@@ -8,6 +8,7 @@ export type Recipe = {
   ingredients: string | null;
   steps: string | null;
   note: string | null;
+  baby_food_note: string | null;
   created_at: string;
 };
 
