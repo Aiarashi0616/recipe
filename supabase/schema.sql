@@ -35,6 +35,7 @@ create table tags (
 create table recipe_tags (
   recipe_id uuid not null references recipes(id) on delete cascade,
   tag_id uuid not null references tags(id) on delete cascade,
+  removed_at timestamptz,
   primary key (recipe_id, tag_id)
 );
 
@@ -69,6 +70,7 @@ create policy "public read tags" on tags for select using (true);
 create policy "public insert tags" on tags for insert with check (true);
 create policy "public read recipe_tags" on recipe_tags for select using (true);
 create policy "public insert recipe_tags" on recipe_tags for insert with check (true);
+create policy "public update recipe_tags" on recipe_tags for update using (true) with check (true);
 create policy "public read fetch_failures" on fetch_failures for select using (true);
 create policy "public insert fetch_failures" on fetch_failures for insert with check (true);
 create policy "public update fetch_failures" on fetch_failures for update using (true) with check (true);

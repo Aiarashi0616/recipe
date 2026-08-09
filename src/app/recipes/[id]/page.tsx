@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { getMealSuggestions, getRecipeById } from "@/app/actions/recipes";
 import { CategoryBadge } from "@/components/CategoryBadge";
 import { DeleteRecipeButton } from "@/components/DeleteRecipeButton";
+import { TagEditor } from "@/components/TagEditor";
 
 export default async function RecipeDetailPage(props: PageProps<"/recipes/[id]">) {
   const { id } = await props.params;
@@ -43,19 +44,7 @@ export default async function RecipeDetailPage(props: PageProps<"/recipes/[id]">
           <h1 className="mt-3 text-xl font-bold text-foreground">{recipe.title}</h1>
         )}
 
-        {recipe.tags.length > 0 && (
-          <div className="mt-3 flex flex-wrap gap-1.5">
-            {recipe.tags.map((tag) => (
-              <Link
-                key={tag}
-                href={`/?q=${encodeURIComponent(tag)}`}
-                className="rounded-full bg-tag-bg px-2.5 py-1 text-xs text-tag-fg transition hover:opacity-80"
-              >
-                #{tag}
-              </Link>
-            ))}
-          </div>
-        )}
+        <TagEditor recipeId={recipe.id} tags={recipe.tags} />
 
         <a
           href={recipe.source_url}

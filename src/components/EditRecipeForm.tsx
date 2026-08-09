@@ -108,7 +108,7 @@ export function EditRecipeForm({ recipe }: { recipe: RecipeWithTags }) {
       </div>
 
       <p className="text-xs text-foreground/50">
-        メイン食材（タグ）は編集画面では変更できません。登録し直す場合は新規登録をご利用ください。
+        メイン食材（タグ）はレシピ詳細画面で追加・削除できます。
       </p>
 
       <button

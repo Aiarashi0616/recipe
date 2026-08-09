@@ -1,11 +1,37 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { extractRecipeFromUrl, getDomain, isInstagramUrl } from "@/lib/recipeExtractor";
 import { recordFetchFailure, recordFetchSuccess } from "@/lib/fetchFailures";
 import { MEAL_COMPANION_CATEGORIES, type Category } from "@/lib/constants";
 import type { RecipeWithTags } from "@/lib/types";
+
+type SupabaseClient = ReturnType<typeof createClient>;
+
+async function findOrCreateTagId(supabase: SupabaseClient, name: string): Promise<string> {
+  const { data: existing } = await supabase
+    .from("tags")
+    .select("id")
+    .eq("name", name)
+    .maybeSingle();
+
+  if (existing) {
+    return existing.id;
+  }
+
+  const { data: inserted, error } = await supabase
+    .from("tags")
+    .insert({ name })
+    .select("id")
+    .single();
+
+  if (error || !inserted) {
+    throw new Error(error?.message ?? "タグの保存に失敗しました。");
+  }
+  return inserted.id;
+}
 
 export async function createRecipe(formData: FormData) {
   const title = String(formData.get("title") ?? "").trim();
@@ -64,25 +90,7 @@ export async function createRecipe(formData: FormData) {
   if (tagNames.length > 0) {
     const tagIds: string[] = [];
     for (const name of tagNames) {
-      const { data: existing } = await supabase
-        .from("tags")
-        .select("id")
-        .eq("name", name)
-        .maybeSingle();
-
-      if (existing) {
-        tagIds.push(existing.id);
-      } else {
-        const { data: inserted, error: tagError } = await supabase
-          .from("tags")
-          .insert({ name })
-          .select("id")
-          .single();
-        if (tagError || !inserted) {
-          throw new Error(tagError?.message ?? "タグの保存に失敗しました。");
-        }
-        tagIds.push(inserted.id);
-      }
+      tagIds.push(await findOrCreateTagId(supabase, name));
     }
 
     const { error: linkError } = await supabase
@@ -98,7 +106,7 @@ export async function createRecipe(formData: FormData) {
 }
 
 const RECIPE_SELECT =
-  "id, title, source_url, category, ingredients, steps, note, baby_food_note, created_at, recipe_tags(tags(name))";
+  "id, title, source_url, category, ingredients, steps, note, baby_food_note, created_at";
 
 type RecipeRow = {
   id: string;
@@ -110,10 +118,9 @@ type RecipeRow = {
   note: string | null;
   baby_food_note: string | null;
   created_at: string;
-  recipe_tags: { tags: { name: string } | null }[] | null;
 };
 
-function mapRecipeRow(r: RecipeRow): RecipeWithTags {
+function mapRecipeRow(r: RecipeRow, tags: string[]): RecipeWithTags {
   return {
     id: r.id,
     title: r.title,
@@ -124,10 +131,43 @@ function mapRecipeRow(r: RecipeRow): RecipeWithTags {
     note: r.note,
     baby_food_note: r.baby_food_note,
     created_at: r.created_at,
-    tags: (r.recipe_tags ?? [])
-      .map((rt) => rt.tags?.name)
-      .filter((n): n is string => Boolean(n)),
+    tags,
   };
+}
+
+// 有効な（removed_atが無い）タグだけをレシピIDごとにまとめて取得する。
+// !inner での埋め込みフィルタは「タグが1件も無いレシピ」を結果から除外してしまうため使わない。
+async function getTagsByRecipeIds(
+  supabase: SupabaseClient,
+  recipeIds: string[]
+): Promise<Map<string, string[]>> {
+  const map = new Map<string, string[]>();
+  if (recipeIds.length === 0) {
+    return map;
+  }
+
+  const { data, error } = await supabase
+    .from("recipe_tags")
+    .select("recipe_id, tags(name)")
+    .in("recipe_id", recipeIds)
+    .is("removed_at", null);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  for (const row of (data ?? []) as unknown as {
+    recipe_id: string;
+    tags: { name: string } | null;
+  }[]) {
+    const name = row.tags?.name;
+    if (!name) continue;
+    const list = map.get(row.recipe_id) ?? [];
+    list.push(name);
+    map.set(row.recipe_id, list);
+  }
+
+  return map;
 }
 
 export async function listRecipes(filters: {
@@ -151,13 +191,19 @@ export async function listRecipes(filters: {
     if (error) {
       throw new Error(error.message);
     }
-    return (data ?? []).map((r) => mapRecipeRow(r as unknown as RecipeRow));
+    const rows = (data ?? []) as unknown as RecipeRow[];
+    const tagsMap = await getTagsByRecipeIds(
+      supabase,
+      rows.map((r) => r.id)
+    );
+    return rows.map((r) => mapRecipeRow(r, tagsMap.get(r.id) ?? []));
   }
 
   // 料理名（部分一致）または材料タグ（部分一致）のどちらかにマッチするレシピを検索する
   const { data: tagRows } = await supabase
     .from("recipe_tags")
     .select("recipe_id, tags!inner(name)")
+    .is("removed_at", null)
     .ilike("tags.name", `%${filters.q}%`);
   const tagMatchedIds = (tagRows ?? []).map((r) => r.recipe_id);
 
@@ -196,9 +242,14 @@ export async function listRecipes(filters: {
     merged.set(r.id, r);
   }
 
-  return Array.from(merged.values())
-    .sort((a, b) => (a.created_at < b.created_at ? 1 : -1))
-    .map(mapRecipeRow);
+  const mergedRows = Array.from(merged.values()).sort((a, b) =>
+    a.created_at < b.created_at ? 1 : -1
+  );
+  const tagsMap = await getTagsByRecipeIds(
+    supabase,
+    mergedRows.map((r) => r.id)
+  );
+  return mergedRows.map((r) => mapRecipeRow(r, tagsMap.get(r.id) ?? []));
 }
 
 export async function getRecipeById(id: string): Promise<RecipeWithTags | null> {
@@ -217,7 +268,8 @@ export async function getRecipeById(id: string): Promise<RecipeWithTags | null> 
     return null;
   }
 
-  return mapRecipeRow(data as unknown as RecipeRow);
+  const tagsMap = await getTagsByRecipeIds(supabase, [id]);
+  return mapRecipeRow(data as unknown as RecipeRow, tagsMap.get(id) ?? []);
 }
 
 export async function updateRecipe(id: string, formData: FormData) {
@@ -268,6 +320,68 @@ export async function softDeleteRecipe(id: string) {
   redirect("/");
 }
 
+export async function addTagToRecipe(recipeId: string, tagName: string) {
+  const name = tagName.trim();
+  if (!name) {
+    return;
+  }
+
+  const supabase = createClient();
+  const tagId = await findOrCreateTagId(supabase, name);
+
+  const { data: existingLink } = await supabase
+    .from("recipe_tags")
+    .select("recipe_id")
+    .eq("recipe_id", recipeId)
+    .eq("tag_id", tagId)
+    .maybeSingle();
+
+  if (existingLink) {
+    const { error } = await supabase
+      .from("recipe_tags")
+      .update({ removed_at: null })
+      .eq("recipe_id", recipeId)
+      .eq("tag_id", tagId);
+    if (error) {
+      throw new Error(error.message);
+    }
+  } else {
+    const { error } = await supabase
+      .from("recipe_tags")
+      .insert({ recipe_id: recipeId, tag_id: tagId });
+    if (error) {
+      throw new Error(error.message);
+    }
+  }
+
+  revalidatePath(`/recipes/${recipeId}`);
+}
+
+export async function removeTagFromRecipe(recipeId: string, tagName: string) {
+  const supabase = createClient();
+  const { data: tag } = await supabase
+    .from("tags")
+    .select("id")
+    .eq("name", tagName)
+    .maybeSingle();
+
+  if (!tag) {
+    return;
+  }
+
+  const { error } = await supabase
+    .from("recipe_tags")
+    .update({ removed_at: new Date().toISOString() })
+    .eq("recipe_id", recipeId)
+    .eq("tag_id", tag.id);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  revalidatePath(`/recipes/${recipeId}`);
+}
+
 export type MealSuggestion = {
   category: Category;
   recipe: RecipeWithTags | null;
@@ -297,10 +411,15 @@ export async function getMealSuggestions(
     const picked =
       candidates.length > 0 ? candidates[Math.floor(Math.random() * candidates.length)] : null;
 
-    suggestions.push({
-      category: companionCategory,
-      recipe: picked ? mapRecipeRow(picked) : null,
-    });
+    if (picked) {
+      const tagsMap = await getTagsByRecipeIds(supabase, [picked.id]);
+      suggestions.push({
+        category: companionCategory,
+        recipe: mapRecipeRow(picked, tagsMap.get(picked.id) ?? []),
+      });
+    } else {
+      suggestions.push({ category: companionCategory, recipe: null });
+    }
   }
 
   return suggestions;
