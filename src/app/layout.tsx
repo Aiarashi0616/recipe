@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { FetchFailureBanner } from "@/components/FetchFailureBanner";
+import { signOut } from "@/app/actions/auth";
+import { createClient } from "@/lib/supabase/server";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -18,7 +20,12 @@ export const metadata: Metadata = {
   description: "材料タグでレシピを検索できる、おうち用レシピ帳です。",
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default async function RootLayout({ children }: LayoutProps<"/">) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
   return (
     <html
       lang="ja"
@@ -30,12 +37,30 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             <a href="/" className="text-lg font-bold tracking-tight text-accent">
               🍽️ おうちレシピ帳
             </a>
-            <a
-              href="/recipes/new"
-              className="rounded-full bg-accent px-4 py-1.5 text-sm font-semibold text-white shadow-sm transition hover:bg-accent-hover"
-            >
-              ＋ 登録
-            </a>
+            {user && (
+              <div className="flex items-center gap-2">
+                <a
+                  href="/family"
+                  className="rounded-full border border-black/10 px-3 py-1.5 text-xs font-medium text-foreground/60 transition hover:border-accent hover:text-accent"
+                >
+                  家族
+                </a>
+                <a
+                  href="/recipes/new"
+                  className="rounded-full bg-accent px-4 py-1.5 text-sm font-semibold text-white shadow-sm transition hover:bg-accent-hover"
+                >
+                  ＋ 登録
+                </a>
+                <form action={signOut}>
+                  <button
+                    type="submit"
+                    className="rounded-full border border-black/10 px-3 py-1.5 text-xs font-medium text-foreground/60 transition hover:border-accent hover:text-accent"
+                  >
+                    ログアウト
+                  </button>
+                </form>
+              </div>
+            )}
           </div>
         </header>
         <FetchFailureBanner />

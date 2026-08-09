@@ -8,7 +8,7 @@ import { recordFetchFailure, recordFetchSuccess } from "@/lib/fetchFailures";
 import { MEAL_COMPANION_CATEGORIES, type Category } from "@/lib/constants";
 import type { RecipeWithTags } from "@/lib/types";
 
-type SupabaseClient = ReturnType<typeof createClient>;
+type SupabaseClient = Awaited<ReturnType<typeof createClient>>;
 
 async function findOrCreateTagId(supabase: SupabaseClient, name: string): Promise<string> {
   const { data: existing } = await supabase
@@ -67,7 +67,7 @@ export async function createRecipe(formData: FormData) {
     }
   }
 
-  const supabase = createClient();
+  const supabase = await createClient();
 
   const { data: recipe, error: recipeError } = await supabase
     .from("recipes")
@@ -174,7 +174,7 @@ export async function listRecipes(filters: {
   category?: string;
   q?: string;
 }): Promise<RecipeWithTags[]> {
-  const supabase = createClient();
+  const supabase = await createClient();
 
   if (!filters.q) {
     let query = supabase
@@ -253,7 +253,7 @@ export async function listRecipes(filters: {
 }
 
 export async function getRecipeById(id: string): Promise<RecipeWithTags | null> {
-  const supabase = createClient();
+  const supabase = await createClient();
   const { data, error } = await supabase
     .from("recipes")
     .select(RECIPE_SELECT)
@@ -285,7 +285,7 @@ export async function updateRecipe(id: string, formData: FormData) {
     throw new Error("URLとカテゴリは必須です。");
   }
 
-  const supabase = createClient();
+  const supabase = await createClient();
   const { error } = await supabase
     .from("recipes")
     .update({
@@ -307,7 +307,7 @@ export async function updateRecipe(id: string, formData: FormData) {
 }
 
 export async function softDeleteRecipe(id: string) {
-  const supabase = createClient();
+  const supabase = await createClient();
   const { error } = await supabase
     .from("recipes")
     .update({ deleted_at: new Date().toISOString() })
@@ -326,7 +326,7 @@ export async function addTagToRecipe(recipeId: string, tagName: string) {
     return;
   }
 
-  const supabase = createClient();
+  const supabase = await createClient();
   const tagId = await findOrCreateTagId(supabase, name);
 
   const { data: existingLink } = await supabase
@@ -358,7 +358,7 @@ export async function addTagToRecipe(recipeId: string, tagName: string) {
 }
 
 export async function removeTagFromRecipe(recipeId: string, tagName: string) {
-  const supabase = createClient();
+  const supabase = await createClient();
   const { data: tag } = await supabase
     .from("tags")
     .select("id")
@@ -387,12 +387,45 @@ export type MealSuggestion = {
   recipe: RecipeWithTags | null;
 };
 
+function splitTerms(text: string | null): string[] {
+  return (text ?? "")
+    .split(/[,、\s]+/)
+    .map((t) => t.trim())
+    .filter(Boolean);
+}
+
+function matchesAnyTerm(tags: string[], terms: string[]): boolean {
+  if (terms.length === 0) return false;
+  return tags.some((tag) => terms.some((term) => tag.includes(term) || term.includes(tag)));
+}
+
+// 家族プロフィールに登録されたアレルギー・苦手食材を、献立提案の除外語として取得する
+async function getFamilyExclusionTerms(
+  supabase: SupabaseClient
+): Promise<{ allergyTerms: string[]; dislikeTerms: string[] }> {
+  const { data, error } = await supabase
+    .from("family_members")
+    .select("allergies, disliked_foods")
+    .is("removed_at", null);
+
+  if (error || !data) {
+    return { allergyTerms: [], dislikeTerms: [] };
+  }
+
+  const rows = data as unknown as { allergies: string | null; disliked_foods: string | null }[];
+  return {
+    allergyTerms: Array.from(new Set(rows.flatMap((m) => splitTerms(m.allergies)))),
+    dislikeTerms: Array.from(new Set(rows.flatMap((m) => splitTerms(m.disliked_foods)))),
+  };
+}
+
 export async function getMealSuggestions(
   recipeId: string,
   category: Category
 ): Promise<MealSuggestion[]> {
-  const supabase = createClient();
+  const supabase = await createClient();
   const companionCategories = MEAL_COMPANION_CATEGORIES.filter((c) => c !== category);
+  const { allergyTerms, dislikeTerms } = await getFamilyExclusionTerms(supabase);
 
   const suggestions: MealSuggestion[] = [];
   for (const companionCategory of companionCategories) {
@@ -408,18 +441,26 @@ export async function getMealSuggestions(
     }
 
     const candidates = (data ?? []) as unknown as RecipeRow[];
-    const picked =
-      candidates.length > 0 ? candidates[Math.floor(Math.random() * candidates.length)] : null;
+    const tagsMap = await getTagsByRecipeIds(
+      supabase,
+      candidates.map((c) => c.id)
+    );
 
-    if (picked) {
-      const tagsMap = await getTagsByRecipeIds(supabase, [picked.id]);
-      suggestions.push({
-        category: companionCategory,
-        recipe: mapRecipeRow(picked, tagsMap.get(picked.id) ?? []),
-      });
-    } else {
-      suggestions.push({ category: companionCategory, recipe: null });
-    }
+    // アレルギーは安全のため常に除外し、苦手食材は他に選べる場合だけ避ける
+    const withoutAllergens = candidates.filter(
+      (c) => !matchesAnyTerm(tagsMap.get(c.id) ?? [], allergyTerms)
+    );
+    const preferred = withoutAllergens.filter(
+      (c) => !matchesAnyTerm(tagsMap.get(c.id) ?? [], dislikeTerms)
+    );
+    const pool = preferred.length > 0 ? preferred : withoutAllergens;
+
+    const picked = pool.length > 0 ? pool[Math.floor(Math.random() * pool.length)] : null;
+
+    suggestions.push({
+      category: companionCategory,
+      recipe: picked ? mapRecipeRow(picked, tagsMap.get(picked.id) ?? []) : null,
+    });
   }
 
   return suggestions;

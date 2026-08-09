@@ -21,3 +21,22 @@ export const CATEGORY_COLORS: Record<Category, { bg: string; fg: string }> = {
   "デザート・おやつ": { bg: "#e3d5de", fg: "#7c5470" },
   "作り置き（冷凍）": { bg: "#d4e0dc", fg: "#4d7a70" },
 };
+
+export const PERSON_TYPES = ["大人", "子ども"] as const;
+export type PersonType = (typeof PERSON_TYPES)[number];
+
+export const MEAL_STAGES = [
+  "大人",
+  "離乳初期",
+  "離乳中期",
+  "離乳後期",
+  "離乳完了期",
+  "幼児",
+] as const;
+export type MealStage = (typeof MEAL_STAGES)[number];
+
+export const PORTION_SIZES = ["普通", "少なめ", "多め"] as const;
+export type PortionSize = (typeof PORTION_SIZES)[number];
+
+export const TASTE_PREFERENCES = ["薄味", "普通", "濃いめ"] as const;
+export type TastePreference = (typeof TASTE_PREFERENCES)[number];

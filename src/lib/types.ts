@@ -1,4 +1,4 @@
-import type { Category } from "./constants";
+import type { Category, MealStage, PersonType, PortionSize, TastePreference } from "./constants";
 
 export type Recipe = {
   id: string;
@@ -14,4 +14,25 @@ export type Recipe = {
 
 export type RecipeWithTags = Recipe & {
   tags: string[];
+};
+
+export type FamilyMember = {
+  id: string;
+  display_name: string;
+  age_label: string | null;
+  person_type: PersonType;
+  meal_stage: MealStage;
+  portion_size: PortionSize;
+  disliked_foods: string | null;
+  liked_foods: string | null;
+  allergies: string | null;
+  taste_preference: TastePreference;
+  dietary_restriction: string | null;
+  created_at: string;
+};
+
+export type HouseholdRule = {
+  id: string;
+  rule_text: string;
+  created_at: string;
 };
