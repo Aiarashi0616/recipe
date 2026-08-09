@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getRecipeById } from "@/app/actions/recipes";
 import { CategoryBadge } from "@/components/CategoryBadge";
+import { DeleteRecipeButton } from "@/components/DeleteRecipeButton";
 
 export default async function RecipeDetailPage(props: PageProps<"/recipes/[id]">) {
   const { id } = await props.params;
@@ -13,17 +14,32 @@ export default async function RecipeDetailPage(props: PageProps<"/recipes/[id]">
 
   return (
     <div className="flex flex-col gap-5">
-      <Link href="/" className="text-sm text-foreground/50 hover:underline">
-        ← 一覧に戻る
-      </Link>
+      <div className="flex items-center justify-between gap-2">
+        <Link href="/" className="text-sm text-foreground/50 hover:underline">
+          ← 一覧に戻る
+        </Link>
+        <div className="flex items-center gap-2">
+          <Link
+            href={`/recipes/${recipe.id}/edit`}
+            className="rounded-full border border-black/10 px-3 py-1.5 text-xs font-medium text-foreground/60 transition hover:border-accent hover:text-accent"
+          >
+            編集
+          </Link>
+          <DeleteRecipeButton id={recipe.id} />
+        </div>
+      </div>
 
       <div className="rounded-2xl border border-black/5 bg-white/70 p-5 shadow-sm dark:bg-white/5">
         <div className="flex items-center justify-between gap-2">
-          <CategoryBadge category={recipe.category} />
+          <CategoryBadge category={recipe.category} size="lg" />
           <span className="text-xs text-foreground/50">
             {new Date(recipe.created_at).toLocaleDateString("ja-JP")}
           </span>
         </div>
+
+        {recipe.title && (
+          <h1 className="mt-3 text-xl font-bold text-foreground">{recipe.title}</h1>
+        )}
 
         {recipe.tags.length > 0 && (
           <div className="mt-3 flex flex-wrap gap-1.5">

@@ -14,12 +14,14 @@ create type recipe_category as enum (
 -- 2. レシピ本体
 create table recipes (
   id uuid primary key default gen_random_uuid(),
+  title text,
   source_url text not null,
   category recipe_category not null,
   ingredients text,
   steps text,
   note text,
-  created_at timestamptz not null default now()
+  created_at timestamptz not null default now(),
+  deleted_at timestamptz
 );
 
 -- 3. タグ（材料タグをはじめとする再利用可能なタグ）
@@ -51,8 +53,9 @@ create index idx_tags_name on tags(name);
 
 -- Row Level Security
 -- 個人利用・認証なしのアプリのため anon キーで select / insert のみ許可する。
--- fetch_failures のみ、失敗回数の更新のため update も許可する。
--- delete のポリシーはどのテーブルにも意図的に作成しない。
+-- recipes は編集・論理削除（deleted_atの更新）のため update も許可する。
+-- fetch_failures は失敗回数の更新のため update も許可する。
+-- delete のポリシーはどのテーブルにも意図的に作成しない（論理削除で対応）。
 alter table recipes enable row level security;
 alter table tags enable row level security;
 alter table recipe_tags enable row level security;
@@ -60,6 +63,7 @@ alter table fetch_failures enable row level security;
 
 create policy "public read recipes" on recipes for select using (true);
 create policy "public insert recipes" on recipes for insert with check (true);
+create policy "public update recipes" on recipes for update using (true) with check (true);
 create policy "public read tags" on tags for select using (true);
 create policy "public insert tags" on tags for insert with check (true);
 create policy "public read recipe_tags" on recipe_tags for select using (true);

@@ -14,6 +14,9 @@ export function RecipeCard({ recipe }: { recipe: RecipeWithTags }) {
           {new Date(recipe.created_at).toLocaleDateString("ja-JP")}
         </span>
       </div>
+      {recipe.title && (
+        <h2 className="mt-2 font-semibold text-foreground">{recipe.title}</h2>
+      )}
       {recipe.tags.length > 0 && (
         <div className="mt-2 flex flex-wrap gap-1.5">
           {recipe.tags.map((tag) => (

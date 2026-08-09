@@ -2,6 +2,7 @@ import type { Category } from "./constants";
 
 export type Recipe = {
   id: string;
+  title: string | null;
   source_url: string;
   category: Category;
   ingredients: string | null;

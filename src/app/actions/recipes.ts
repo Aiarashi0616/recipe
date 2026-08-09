@@ -8,6 +8,7 @@ import type { Category } from "@/lib/constants";
 import type { RecipeWithTags } from "@/lib/types";
 
 export async function createRecipe(formData: FormData) {
+  const title = String(formData.get("title") ?? "").trim();
   const sourceUrl = String(formData.get("source_url") ?? "").trim();
   const category = String(formData.get("category") ?? "") as Category;
   const note = String(formData.get("note") ?? "").trim();
@@ -44,6 +45,7 @@ export async function createRecipe(formData: FormData) {
   const { data: recipe, error: recipeError } = await supabase
     .from("recipes")
     .insert({
+      title: title || null,
       source_url: sourceUrl,
       category,
       ingredients: ingredients || null,
@@ -114,8 +116,9 @@ export async function listRecipes(filters: {
   let query = supabase
     .from("recipes")
     .select(
-      "id, source_url, category, ingredients, steps, note, created_at, recipe_tags(tags(name))"
+      "id, title, source_url, category, ingredients, steps, note, created_at, recipe_tags(tags(name))"
     )
+    .is("deleted_at", null)
     .order("created_at", { ascending: false });
 
   if (filters.category) {
@@ -132,6 +135,7 @@ export async function listRecipes(filters: {
 
   return (data ?? []).map((r) => ({
     id: r.id,
+    title: r.title,
     source_url: r.source_url,
     category: r.category,
     ingredients: r.ingredients,
@@ -149,9 +153,10 @@ export async function getRecipeById(id: string): Promise<RecipeWithTags | null> 
   const { data, error } = await supabase
     .from("recipes")
     .select(
-      "id, source_url, category, ingredients, steps, note, created_at, recipe_tags(tags(name))"
+      "id, title, source_url, category, ingredients, steps, note, created_at, recipe_tags(tags(name))"
     )
     .eq("id", id)
+    .is("deleted_at", null)
     .maybeSingle();
 
   if (error) {
@@ -163,6 +168,7 @@ export async function getRecipeById(id: string): Promise<RecipeWithTags | null> 
 
   return {
     id: data.id,
+    title: data.title,
     source_url: data.source_url,
     category: data.category,
     ingredients: data.ingredients,
@@ -173,4 +179,50 @@ export async function getRecipeById(id: string): Promise<RecipeWithTags | null> 
       .map((rt) => (rt as unknown as { tags: { name: string } | null }).tags?.name)
       .filter((n): n is string => Boolean(n)),
   };
+}
+
+export async function updateRecipe(id: string, formData: FormData) {
+  const title = String(formData.get("title") ?? "").trim();
+  const sourceUrl = String(formData.get("source_url") ?? "").trim();
+  const category = String(formData.get("category") ?? "") as Category;
+  const ingredients = String(formData.get("ingredients") ?? "").trim();
+  const steps = String(formData.get("steps") ?? "").trim();
+  const note = String(formData.get("note") ?? "").trim();
+
+  if (!sourceUrl || !category) {
+    throw new Error("URLとカテゴリは必須です。");
+  }
+
+  const supabase = createClient();
+  const { error } = await supabase
+    .from("recipes")
+    .update({
+      title: title || null,
+      source_url: sourceUrl,
+      category,
+      ingredients: ingredients || null,
+      steps: steps || null,
+      note: note || null,
+    })
+    .eq("id", id);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  redirect(`/recipes/${id}`);
+}
+
+export async function softDeleteRecipe(id: string) {
+  const supabase = createClient();
+  const { error } = await supabase
+    .from("recipes")
+    .update({ deleted_at: new Date().toISOString() })
+    .eq("id", id);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  redirect("/");
 }
