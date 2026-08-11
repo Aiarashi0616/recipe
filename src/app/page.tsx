@@ -2,6 +2,7 @@ import { listRecipes } from "@/app/actions/recipes";
 import { RecipeCard } from "@/components/RecipeCard";
 import { CategoryFilter } from "@/components/CategoryFilter";
 import { TagFilter } from "@/components/TagFilter";
+import { FloralAccent } from "@/components/FloralAccent";
 
 export default async function Home(props: PageProps<"/">) {
   const searchParams = await props.searchParams;
@@ -16,9 +17,12 @@ export default async function Home(props: PageProps<"/">) {
       <CategoryFilter activeCategory={category} activeQuery={q} />
 
       {recipes.length === 0 ? (
-        <p className="mt-8 text-center text-sm text-foreground/50">
-          レシピが見つかりませんでした。まずは1件登録してみましょう。
-        </p>
+        <div className="mt-8 flex flex-col items-center gap-2">
+          <FloralAccent className="h-16 w-20" />
+          <p className="text-center text-sm text-foreground/50">
+            レシピが見つかりませんでした。まずは1件登録してみましょう。
+          </p>
+        </div>
       ) : (
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           {recipes.map((recipe) => (

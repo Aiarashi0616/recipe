@@ -34,7 +34,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
       <body className="min-h-full flex flex-col bg-[var(--background)] text-[var(--foreground)]">
         <header className="sticky top-0 z-10 border-b border-black/5 bg-[var(--background)]/90 backdrop-blur">
           <div className="mx-auto flex max-w-2xl items-center justify-between px-4 py-3">
-            <a href="/" className="text-lg font-bold tracking-tight text-accent">
+            <a href="/" className="text-[23px] font-bold tracking-tight text-accent">
               🍽️ 分けっこみんなごはん
             </a>
             {user && (

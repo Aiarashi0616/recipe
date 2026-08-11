@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { signUp } from "@/app/actions/auth";
+import { FloralAccent } from "@/components/FloralAccent";
 
 export default async function SignupPage(props: PageProps<"/signup">) {
   const searchParams = await props.searchParams;
@@ -8,8 +9,8 @@ export default async function SignupPage(props: PageProps<"/signup">) {
   return (
     <div className="mx-auto flex max-w-sm flex-col gap-6 py-10">
       <div className="text-center">
-        <p className="text-2xl">🍽️</p>
-        <h1 className="mt-2 text-xl font-bold">分けっこみんなごはんに新規登録</h1>
+        <FloralAccent className="mx-auto h-20 w-24" />
+        <h1 className="mt-1 text-xl font-bold">分けっこみんなごはんに新規登録</h1>
         <p className="mt-1 text-xs text-foreground/50">無料で登録できます</p>
       </div>
 
