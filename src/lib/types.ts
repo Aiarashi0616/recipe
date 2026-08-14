@@ -1,4 +1,11 @@
-import type { Category, MealStage, PersonType, PortionSize, TastePreference } from "./constants";
+import type {
+  Category,
+  MealStage,
+  MealType,
+  PersonType,
+  PortionSize,
+  TastePreference,
+} from "./constants";
 
 export type Recipe = {
   id: string;
@@ -41,4 +48,16 @@ export type HouseholdRule = {
 export type HouseholdSettings = {
   weekday_time_limit_minutes: number | null;
   weekend_time_limit_minutes: number | null;
+};
+
+export type MealPlanEntry = {
+  id: string;
+  entry_date: string;
+  meal_type: MealType;
+  note: string | null;
+  recipe: {
+    id: string;
+    title: string | null;
+    category: Category;
+  };
 };

@@ -91,6 +91,20 @@ create table household_settings (
   weekend_time_limit_minutes integer
 );
 
+-- 7. 献立カレンダー（1つの食事枠に複数レシピを紐づけられる）
+create type meal_type as enum ('朝食', '昼食', '夕食');
+
+create table meal_plan_entries (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null default auth.uid() references auth.users(id),
+  entry_date date not null,
+  meal_type meal_type not null,
+  recipe_id uuid not null references recipes(id),
+  note text,
+  created_at timestamptz not null default now(),
+  removed_at timestamptz
+);
+
 -- 検索・絞り込み用インデックス
 create index idx_recipes_category on recipes(category);
 create index idx_recipes_user_id on recipes(user_id);
@@ -99,6 +113,7 @@ create index idx_recipe_tags_recipe_id on recipe_tags(recipe_id);
 create index idx_tags_name on tags(name);
 create index idx_family_members_user_id on family_members(user_id);
 create index idx_household_rules_user_id on household_rules(user_id);
+create index idx_meal_plan_entries_user_date on meal_plan_entries(user_id, entry_date);
 
 -- Row Level Security
 -- ログイン中の本人のデータのみ読み書きできる。delete のポリシーはどのテーブルにも
@@ -110,6 +125,7 @@ alter table fetch_failures enable row level security;
 alter table family_members enable row level security;
 alter table household_rules enable row level security;
 alter table household_settings enable row level security;
+alter table meal_plan_entries enable row level security;
 
 create policy "owner select recipes" on recipes for select using (auth.uid() = user_id);
 create policy "owner insert recipes" on recipes for insert with check (auth.uid() = user_id);
@@ -146,3 +162,7 @@ create policy "owner update household_rules" on household_rules for update using
 create policy "owner select household_settings" on household_settings for select using (auth.uid() = user_id);
 create policy "owner insert household_settings" on household_settings for insert with check (auth.uid() = user_id);
 create policy "owner update household_settings" on household_settings for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+create policy "owner select meal_plan_entries" on meal_plan_entries for select using (auth.uid() = user_id);
+create policy "owner insert meal_plan_entries" on meal_plan_entries for insert with check (auth.uid() = user_id);
+create policy "owner update meal_plan_entries" on meal_plan_entries for update using (auth.uid() = user_id) with check (auth.uid() = user_id);

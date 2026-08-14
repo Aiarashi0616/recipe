@@ -43,6 +43,12 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
             {user && (
               <div className="flex items-center gap-2">
                 <a
+                  href="/meal-plan"
+                  className="rounded-full border border-black/10 px-3 py-1.5 text-xs font-medium text-foreground/60 transition hover:border-accent hover:text-accent"
+                >
+                  献立
+                </a>
+                <a
                   href="/family"
                   className="rounded-full border border-black/10 px-3 py-1.5 text-xs font-medium text-foreground/60 transition hover:border-accent hover:text-accent"
                 >

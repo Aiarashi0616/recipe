@@ -40,3 +40,6 @@ export type PortionSize = (typeof PORTION_SIZES)[number];
 
 export const TASTE_PREFERENCES = ["薄味", "普通", "濃いめ"] as const;
 export type TastePreference = (typeof TASTE_PREFERENCES)[number];
+
+export const MEAL_TYPES = ["朝食", "昼食", "夕食"] as const;
+export type MealType = (typeof MEAL_TYPES)[number];
