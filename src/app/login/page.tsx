@@ -55,6 +55,12 @@ export default async function LoginPage(props: PageProps<"/login">) {
       </form>
 
       <p className="text-center text-sm text-foreground/60">
+        <Link href="/forgot-password" className="text-accent underline">
+          パスワードをお忘れですか？
+        </Link>
+      </p>
+
+      <p className="text-center text-sm text-foreground/60">
         アカウントをお持ちでない方は{" "}
         <Link href="/signup" className="text-accent underline">
           新規登録

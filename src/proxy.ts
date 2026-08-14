@@ -1,7 +1,11 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-const PUBLIC_PATHS = ["/login", "/signup"];
+// 未ログインでもアクセスできるパス
+const PUBLIC_PATHS = ["/login", "/signup", "/forgot-password", "/reset-password"];
+// ログイン済みなら "/" にリダイレクトするパス（reset-passwordはログイン中でも
+// パスワード再設定リンクから来る可能性があるため対象外にする）
+const AUTH_REDIRECT_PATHS = ["/login", "/signup"];
 
 export async function proxy(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
@@ -30,6 +34,9 @@ export async function proxy(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   const isPublicPath = PUBLIC_PATHS.some((p) => request.nextUrl.pathname.startsWith(p));
+  const isAuthRedirectPath = AUTH_REDIRECT_PATHS.some((p) =>
+    request.nextUrl.pathname.startsWith(p)
+  );
 
   if (!user && !isPublicPath) {
     const url = request.nextUrl.clone();
@@ -37,7 +44,7 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  if (user && isPublicPath) {
+  if (user && isAuthRedirectPath) {
     const url = request.nextUrl.clone();
     url.pathname = "/";
     return NextResponse.redirect(url);
