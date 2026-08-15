@@ -48,6 +48,7 @@ export async function addMealPlanEntry(formData: FormData) {
   const entryDate = String(formData.get("entry_date") ?? "").trim();
   const mealType = String(formData.get("meal_type") ?? "") as MealType;
   const recipeId = String(formData.get("recipe_id") ?? "").trim();
+  const returnTo = String(formData.get("return_to") ?? "").trim();
 
   if (!entryDate || !mealType || !recipeId) {
     throw new Error("必要な情報が不足しています。");
@@ -62,6 +63,12 @@ export async function addMealPlanEntry(formData: FormData) {
 
   if (error) {
     throw new Error(error.message);
+  }
+
+  // return_to はこちらで用意したhiddenフィールドの値のみを想定し、
+  // 念のため相対パスであることを確認してからリダイレクトする
+  if (returnTo.startsWith("/")) {
+    redirect(`${returnTo}?added=1`);
   }
 
   const weekStart = formatISODate(startOfWeek(parseISODate(entryDate)));

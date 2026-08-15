@@ -4,9 +4,12 @@ import { getMealSuggestions, getRecipeById } from "@/app/actions/recipes";
 import { CategoryBadge } from "@/components/CategoryBadge";
 import { DeleteRecipeButton } from "@/components/DeleteRecipeButton";
 import { TagEditor } from "@/components/TagEditor";
+import { AddToMealPlanForm } from "@/components/AddToMealPlanForm";
 
 export default async function RecipeDetailPage(props: PageProps<"/recipes/[id]">) {
   const { id } = await props.params;
+  const searchParams = await props.searchParams;
+  const added = searchParams.added === "1";
   const recipe = await getRecipeById(id);
 
   if (!recipe) {
@@ -50,6 +53,14 @@ export default async function RecipeDetailPage(props: PageProps<"/recipes/[id]">
         )}
 
         <TagEditor recipeId={recipe.id} tags={recipe.tags} />
+
+        {added && (
+          <p className="mt-4 rounded-xl bg-accent-soft px-4 py-2.5 text-sm text-accent">
+            献立に追加しました。
+          </p>
+        )}
+
+        <AddToMealPlanForm recipeId={recipe.id} returnTo={`/recipes/${recipe.id}`} />
 
         <a
           href={recipe.source_url}
